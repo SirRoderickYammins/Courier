@@ -37,7 +37,7 @@ fn setup(mut commands: Commands) {
     commands.spawn((
         Camera3dBundle {
             projection: Projection::Perspective(PerspectiveProjection {
-                fov: PI / 3.0,
+                fov: PI / 2.5,
                 ..default()
             }),
             ..default()

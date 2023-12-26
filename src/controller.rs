@@ -1,4 +1,4 @@
-use std::f32::consts::{FRAC_2_PI, PI, TAU};
+use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
@@ -74,7 +74,7 @@ pub fn camera_mouse_movement(
         mouse_delta *= input.sensitivity;
         input.yaw -= mouse_delta.x;
 
-        input.pitch = (input.pitch - mouse_delta.y).clamp(-FRAC_2_PI, FRAC_2_PI);
+        input.pitch = (input.pitch - mouse_delta.y).clamp(-FRAC_PI_2, FRAC_PI_2);
 
         if input.yaw.abs() > PI {
             input.yaw = input.yaw.rem_euclid(TAU);
