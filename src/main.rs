@@ -1,25 +1,22 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::CursorGrabMode};
+use courier::controller::*;
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .add_systems(Startup, spawn_gltf)
+        .add_systems(Update, grab_mouse)
+        .add_plugins(CameraControllerPlugin)
         .run();
 }
 
 fn spawn_gltf(mut commands: Commands, ass: Res<AssetServer>) {
     let my_gltf = ass.load("../assets/Apartment 2.glb#Scene0");
-    let cute_dino = ass.load("../assets/dino.glb#Scene1");
-
-    commands.spawn(SceneBundle {
-        scene: cute_dino,
-        transform: Transform::from_xyz(2.0, 2.4, 4.0),
-        ..default()
-    });
 
     commands.spawn(SceneBundle {
         scene: my_gltf,
-        transform: Transform::from_xyz(2.0, 1.0, 4.0),
+        transform: Transform::from_xyz(0.0, 1.0, -4.0),
         ..default()
     });
 }
@@ -35,5 +32,44 @@ fn setup(mut commands: Commands) {
         ..default()
     });
 
-    commands.spawn(Camera3dBundle::default());
+    commands.spawn((
+        Camera3dBundle { ..default() },
+        PlayerCamera { ..default() },
+        PlayerControlInput { ..default() },
+    ));
+
+    commands.spawn(
+        TextBundle::from_section(
+            "Poo Poo Pee Pee",
+            TextStyle {
+                font_size: 24.0,
+                color: Color::WHITE,
+                ..default()
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(5.0),
+            left: Val::Px(5.0),
+            ..default()
+        }),
+    );
+}
+
+fn grab_mouse(
+    mut windows: Query<&mut Window>,
+    mouse: Res<Input<MouseButton>>,
+    key: Res<Input<KeyCode>>,
+) {
+    let mut window = windows.single_mut();
+
+    if mouse.just_pressed(MouseButton::Left) {
+        window.cursor.visible = true;
+        window.cursor.grab_mode = CursorGrabMode::Locked;
+    }
+
+    if key.just_pressed(KeyCode::Escape) {
+        window.cursor.visible = true;
+        window.cursor.grab_mode = CursorGrabMode::None;
+    }
 }
