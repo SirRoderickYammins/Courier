@@ -1,9 +1,11 @@
 use bevy::{prelude::*, window::CursorGrabMode};
+use bevy_atmosphere::prelude::*;
 use courier::controller::*;
+use std::f32::consts::PI;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins((DefaultPlugins, AtmospherePlugin))
         .add_systems(Startup, setup)
         .add_systems(Startup, spawn_gltf)
         .add_systems(Update, grab_mouse)
@@ -33,9 +35,16 @@ fn setup(mut commands: Commands) {
     });
 
     commands.spawn((
-        Camera3dBundle { ..default() },
+        Camera3dBundle {
+            projection: Projection::Perspective(PerspectiveProjection {
+                fov: PI / 3.0,
+                ..default()
+            }),
+            ..default()
+        },
         PlayerCamera { ..default() },
         PlayerControlInput { ..default() },
+        AtmosphereCamera::default(),
     ));
 
     commands.spawn(
@@ -64,7 +73,7 @@ fn grab_mouse(
     let mut window = windows.single_mut();
 
     if mouse.just_pressed(MouseButton::Left) {
-        window.cursor.visible = true;
+        window.cursor.visible = false;
         window.cursor.grab_mode = CursorGrabMode::Locked;
     }
 
