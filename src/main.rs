@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::CursorGrabMode};
 use bevy_atmosphere::prelude::*;
+use bevy_rapier3d::{control::KinematicCharacterController, dynamics::RigidBody, prelude::*};
 use courier::controller::*;
 use std::f32::consts::PI;
 
@@ -7,6 +8,8 @@ fn main() {
     App::new()
         .add_plugins((DefaultPlugins, AtmospherePlugin))
         .add_systems(Startup, setup)
+        .insert_resource(RapierConfiguration::default())
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         .add_systems(Startup, spawn_gltf)
         .add_systems(Update, grab_mouse)
         .add_plugins(CameraControllerPlugin)
@@ -16,11 +19,17 @@ fn main() {
 fn spawn_gltf(mut commands: Commands, ass: Res<AssetServer>) {
     let my_gltf = ass.load("../assets/Apartment 2.glb#Scene0");
 
-    commands.spawn(SceneBundle {
-        scene: my_gltf,
-        transform: Transform::from_xyz(0.0, 1.0, -4.0),
-        ..default()
-    });
+    commands
+        .spawn((
+            RigidBody::Fixed,
+            SceneBundle {
+                scene: my_gltf,
+                transform: Transform::from_xyz(0.0, -3.0, 0.0),
+                ..default()
+            },
+        ))
+        .insert(Collider::ball(0.5))
+        .insert(TransformBundle::from(Transform::from_xyz(0.0, -3.0, 0.0)));
 }
 
 fn setup(mut commands: Commands) {
@@ -30,22 +39,27 @@ fn setup(mut commands: Commands) {
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+        transform: Transform::from_xyz(0.0, 8.0, 0.0),
         ..default()
     });
 
-    commands.spawn((
-        Camera3dBundle {
-            projection: Projection::Perspective(PerspectiveProjection {
-                fov: PI / 2.5,
+    commands
+        .spawn((
+            Collider::ball(0.5),
+            RigidBody::KinematicPositionBased,
+            Camera3dBundle {
+                projection: Projection::Perspective(PerspectiveProjection {
+                    fov: PI / 2.5,
+                    ..default()
+                }),
                 ..default()
-            }),
-            ..default()
-        },
-        PlayerCamera { ..default() },
-        PlayerControlInput { ..default() },
-        AtmosphereCamera::default(),
-    ));
+            },
+            PlayerCamera { ..default() },
+            PlayerControlInput { ..default() },
+            AtmosphereCamera::default(),
+        ))
+        .insert(KinematicCharacterController::default())
+        .insert(Collider::ball(0.5));
 
     commands.spawn(
         TextBundle::from_section(

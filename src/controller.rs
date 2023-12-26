@@ -2,6 +2,7 @@ use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
+use bevy_rapier3d::control::KinematicCharacterController;
 
 pub struct CameraControllerPlugin;
 
@@ -49,7 +50,7 @@ impl Default for PlayerControlInput {
 impl Default for PlayerCamera {
     fn default() -> Self {
         Self {
-            transform: Vec3::new(2.0, 3.0, 3.0),
+            transform: Vec3::new(0.0, 10.0, 0.0),
             rotation: Quat::IDENTITY,
         }
     }
@@ -57,7 +58,8 @@ impl Default for PlayerCamera {
 
 pub fn player_camera_transforms(mut cam_query: Query<(&PlayerCamera, &mut Transform)>) {
     for (camera, mut transform) in cam_query.iter_mut() {
-        transform.translation = camera.transform;
+        println!("Camera Transform: {}", camera.transform);
+        transform.translation += camera.transform;
         transform.rotation = camera.rotation;
     }
 }
@@ -85,9 +87,14 @@ pub fn camera_mouse_movement(
 pub fn update_titties(
     time: Res<Time>,
     input: Res<Input<KeyCode>>,
-    mut cam_query: Query<(&mut PlayerCamera, &PlayerControlInput, &Transform)>,
+    mut cam_query: Query<(
+        &mut PlayerCamera,
+        &PlayerControlInput,
+        &Transform,
+        &mut KinematicCharacterController,
+    )>,
 ) {
-    for (mut camera, player_input, transform) in cam_query.iter_mut() {
+    for (mut camera, player_input, transform, mut controller) in cam_query.iter_mut() {
         let forward_vector = transform.forward();
         let left_vector = transform.left();
         let right_vector = transform.right();
@@ -103,16 +110,23 @@ pub fn update_titties(
                 _ => (),
             }
         }
-
+        let mut translation = controller.translation.unwrap_or_default();
+        println!("Value of translation before loop: {:?}", translation);
         for key in input.get_pressed() {
             match key {
-                KeyCode::W => camera.transform += forward_vector * dt * speed,
-                KeyCode::S => camera.transform += back_vector * dt * speed,
-                KeyCode::A => camera.transform += left_vector * dt * speed,
-                KeyCode::D => camera.transform += right_vector * dt * speed,
+                KeyCode::W => translation += forward_vector * dt * speed,
+                KeyCode::S => translation += back_vector * dt * speed,
+                KeyCode::A => translation += left_vector * dt * speed,
+                KeyCode::D => translation += right_vector * dt * speed,
                 _ => (),
             }
         }
+
+        println!("Controller translation: {:?}", translation);
+
+        controller.translation = Some(translation);
+        camera.transform = translation;
+
         camera.rotation =
             Quat::from_euler(EulerRot::YXZ, player_input.yaw, player_input.pitch, 0.0);
     }
