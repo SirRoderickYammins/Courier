@@ -58,7 +58,6 @@ impl Default for PlayerCamera {
 
 pub fn player_camera_transforms(mut cam_query: Query<(&PlayerCamera, &mut Transform)>) {
     for (camera, mut transform) in cam_query.iter_mut() {
-        println!("Camera Transform: {}", camera.transform);
         transform.translation += camera.transform;
         transform.rotation = camera.rotation;
     }
@@ -111,7 +110,6 @@ pub fn update_titties(
             }
         }
         let mut translation = controller.translation.unwrap_or_default();
-        println!("Value of translation before loop: {:?}", translation);
         for key in input.get_pressed() {
             match key {
                 KeyCode::W => translation += forward_vector * dt * speed,
@@ -121,8 +119,6 @@ pub fn update_titties(
                 _ => (),
             }
         }
-
-        println!("Controller translation: {:?}", translation);
 
         controller.translation = Some(translation);
         camera.transform = translation;

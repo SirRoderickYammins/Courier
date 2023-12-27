@@ -13,6 +13,7 @@ fn main() {
         .add_systems(Startup, spawn_gltf)
         .add_systems(Update, grab_mouse)
         .add_plugins(CameraControllerPlugin)
+        .add_systems(Update, player_pos)
         .run();
 }
 
@@ -28,7 +29,7 @@ fn spawn_gltf(mut commands: Commands, ass: Res<AssetServer>) {
                 ..default()
             },
         ))
-        .insert(Collider::ball(0.5))
+        .insert(Collider::cuboid(5.0, 5.0, 5.0))
         .insert(TransformBundle::from(Transform::from_xyz(0.0, -3.0, 0.0)));
 }
 
@@ -45,8 +46,9 @@ fn setup(mut commands: Commands) {
 
     commands
         .spawn((
-            Collider::ball(0.5),
-            RigidBody::KinematicPositionBased,
+            Collider::ball(3.5),
+            RigidBody::Dynamic,
+            Ccd { enabled: true },
             Camera3dBundle {
                 projection: Projection::Perspective(PerspectiveProjection {
                     fov: PI / 2.5,
@@ -58,8 +60,7 @@ fn setup(mut commands: Commands) {
             PlayerControlInput { ..default() },
             AtmosphereCamera::default(),
         ))
-        .insert(KinematicCharacterController::default())
-        .insert(Collider::ball(0.5));
+        .insert(KinematicCharacterController::default());
 
     commands.spawn(
         TextBundle::from_section(
@@ -94,5 +95,14 @@ fn grab_mouse(
     if key.just_pressed(KeyCode::Escape) {
         window.cursor.visible = true;
         window.cursor.grab_mode = CursorGrabMode::None;
+    }
+}
+
+fn player_pos(
+    player_queer: Query<&KinematicCharacterController>,
+    mut text_query: Query<&mut Text>,
+) {
+    for player in player_queer.iter() {
+        println!("Niggers: {:?}", player.translation);
     }
 }
