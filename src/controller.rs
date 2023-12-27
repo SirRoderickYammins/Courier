@@ -41,8 +41,8 @@ impl Default for PlayerControlInput {
             pitch: 0.0,
             yaw: 0.0,
             sensitivity: 0.01,
-            walk_speed: 2.0,
-            run_speed: 4.0,
+            walk_speed: 0.5,
+            run_speed: 1.0,
         }
     }
 }
