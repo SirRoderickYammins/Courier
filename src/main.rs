@@ -1,128 +1,117 @@
-use bevy::{prelude::*, window::CursorGrabMode};
-use bevy_atmosphere::prelude::*;
-use bevy_rapier3d::{control::KinematicCharacterController, prelude::*};
-use courier::controller::*;
-use courier::get_scene_colliders;
-use std::f32::consts::PI;
+use std::f32::consts::TAU;
+
+use bevy::{
+    gltf::Gltf,
+    gltf::{GltfMesh, GltfNode},
+    math::Vec3Swizzles,
+    prelude::*,
+    window::CursorGrabMode,
+};
+use bevy_rapier3d::prelude::*;
+
+use bevy_fps_controller::controller::*;
+
+const SPAWN_POINT: Vec3 = Vec3::new(0.0, 1.0, 0.0);
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, AtmospherePlugin))
-        .add_state::<GameState>()
+        .insert_resource(AmbientLight {
+            color: Color::WHITE,
+            brightness: 0.5,
+        })
+        .insert_resource(ClearColor(Color::hex("D4F5F5").unwrap()))
         .insert_resource(RapierConfiguration::default())
-        .add_plugins((
-            RapierPhysicsPlugin::<NoUserData>::default(),
-            RapierDebugRenderPlugin::default(),
-        ))
-        .add_systems(OnEnter(GameState::Loading), (spawn_gltf,))
-        .add_systems(Update, grab_mouse)
-        .add_plugins(CameraControllerPlugin)
+        .add_plugins(DefaultPlugins)
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+        // .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins(FpsControllerPlugin)
+        .add_systems(Startup, setup)
         .add_systems(
             Update,
-            (check_if_loaded,).run_if(in_state(GameState::Loading)),
+            (manage_cursor, scene_colliders, display_text, respawn),
         )
-        .add_systems(OnEnter(GameState::Loaded), setup)
         .run();
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, States, Default)]
+fn setup(mut commands: Commands, mut window: Query<&mut Window>, assets: Res<AssetServer>) {
+    let mut window = window.single_mut();
+    window.title = String::from("Courier");
+    // commands.spawn(Window { title: "Minimal FPS Controller Example".to_string(), ..default() });
 
-enum GameState {
-    #[default]
-    Loading,
-    Loaded,
-}
-
-#[derive(Default, Resource)]
-struct GameAssets {
-    apartment_scene: Handle<Scene>,
-    apartment_collider: Vec<(Collider, Transform)>,
-}
-
-// Loading apartment scene from gltf
-fn spawn_gltf(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.insert_resource(GameAssets {
-        apartment_scene: asset_server.load("../assets/untitled.glb#Scene0"),
-        ..default()
-    });
-}
-//Check if scene is loaded, then grab colliders
-fn check_if_loaded(
-    mut scenes: ResMut<Assets<Scene>>,
-    mut game_assets: ResMut<GameAssets>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut game_state: ResMut<NextState<GameState>>,
-) {
-    let scene = if let Some(scene) = scenes.get_mut(&game_assets.apartment_scene) {
-        scene
-    } else {
-        return;
-    };
-
-    // Call get scene colliders. Should only be called once otherwise it will remove collider
-    // meshes
-    game_assets.apartment_collider = get_scene_colliders(&mut meshes, &mut scene.world)
-        .expect("Failed to create apartment colliders");
-
-    game_state.set(GameState::Loaded);
-}
-
-fn setup(mut commands: Commands, game_assets: Res<GameAssets>) {
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            illuminance: 6000.0,
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::from_xyz(0.0, 8.0, 0.0),
+        transform: Transform::from_xyz(4.0, 7.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
 
-    commands
+    // Note that we have two entities for the player
+    // One is a "logical" player that handles the physics computation and collision
+    // The other is a "render" player that is what is displayed to the user
+    // This distinction is useful for later on if you want to add multiplayer,
+    // where often time these two ideas are not exactly synced up
+    let logical_entity = commands
         .spawn((
-            RigidBody::Fixed,
-            Sleeping::disabled(),
-            SceneBundle {
-                scene: game_assets.apartment_scene.clone(),
-                transform: Transform::from_translation(Vec3::new(0.0, -5.0, 0.0)),
-                ..default()
+            Collider::capsule(Vec3::Y * 0.5, Vec3::Y * 1.5, 0.5),
+            Friction {
+                coefficient: 0.0,
+                combine_rule: CoefficientCombineRule::Min,
             },
-        ))
-        .with_children(|parent| {
-            for (collider, transform) in game_assets.apartment_collider.iter() {
-                parent.spawn((
-                    collider.clone(),
-                    TransformBundle::from_transform(*transform),
-                ));
-            }
-        });
-
-    commands
-        .spawn((
-            Collider::ball(0.25),
+            Restitution {
+                coefficient: 0.0,
+                combine_rule: CoefficientCombineRule::Min,
+            },
+            ActiveEvents::COLLISION_EVENTS,
+            Velocity::zero(),
             RigidBody::Dynamic,
-            Ccd { enabled: true },
-            GravityScale(1.0),
             Sleeping::disabled(),
-            Camera3dBundle {
-                projection: Projection::Perspective(PerspectiveProjection {
-                    fov: PI / 2.5,
-                    ..default()
-                }),
+            LockedAxes::ROTATION_LOCKED,
+            AdditionalMassProperties::Mass(1.0),
+            GravityScale(0.0),
+            Ccd { enabled: true }, // Prevent clipping when going fast
+            TransformBundle::from_transform(Transform::from_translation(SPAWN_POINT)),
+            LogicalPlayer,
+            FpsControllerInput {
+                pitch: -TAU / 12.0,
+                yaw: TAU * 5.0 / 8.0,
                 ..default()
             },
-            PlayerCamera { ..default() },
-            PlayerControlInput { ..default() },
-            AtmosphereCamera::default(),
+            FpsController {
+                air_acceleration: 80.0,
+                ..default()
+            },
         ))
-        .insert(KinematicCharacterController::default());
+        .insert(CameraConfig {
+            height_offset: 0.0,
+            radius_scale: 0.75,
+        })
+        .id();
+
+    commands.spawn((
+        Camera3dBundle {
+            projection: Projection::Perspective(PerspectiveProjection {
+                fov: TAU / 5.0,
+                ..default()
+            }),
+            ..default()
+        },
+        RenderPlayer { logical_entity },
+    ));
+
+    commands.insert_resource(MainScene {
+        handle: assets.load("untitled.glb"),
+        is_loaded: false,
+    });
 
     commands.spawn(
         TextBundle::from_section(
-            "Poo Poo Pee Pee",
+            "",
             TextStyle {
                 font_size: 24.0,
-                color: Color::WHITE,
+                color: Color::BLACK,
                 ..default()
             },
         )
@@ -135,20 +124,97 @@ fn setup(mut commands: Commands, game_assets: Res<GameAssets>) {
     );
 }
 
-fn grab_mouse(
-    mut windows: Query<&mut Window>,
-    mouse: Res<Input<MouseButton>>,
-    key: Res<Input<KeyCode>>,
-) {
-    let mut window = windows.single_mut();
+fn respawn(mut query: Query<(&mut Transform, &mut Velocity)>) {
+    for (mut transform, mut velocity) in &mut query {
+        if transform.translation.y > -50.0 {
+            continue;
+        }
 
-    if mouse.just_pressed(MouseButton::Left) {
-        window.cursor.visible = false;
-        window.cursor.grab_mode = CursorGrabMode::Locked;
+        velocity.linvel = Vec3::ZERO;
+        transform.translation = SPAWN_POINT;
+    }
+}
+
+#[derive(Resource)]
+struct MainScene {
+    handle: Handle<Gltf>,
+    is_loaded: bool,
+}
+
+fn scene_colliders(
+    mut commands: Commands,
+    mut main_scene: ResMut<MainScene>,
+    gltf_assets: Res<Assets<Gltf>>,
+    gltf_mesh_assets: Res<Assets<GltfMesh>>,
+    gltf_node_assets: Res<Assets<GltfNode>>,
+    mesh_assets: Res<Assets<Mesh>>,
+) {
+    if main_scene.is_loaded {
+        return;
     }
 
+    let gltf = gltf_assets.get(&main_scene.handle);
+
+    if let Some(gltf) = gltf {
+        let scene = gltf.scenes.first().unwrap().clone();
+        commands.spawn(SceneBundle { scene, ..default() });
+        for node in &gltf.nodes {
+            let node = gltf_node_assets.get(node).unwrap();
+            if let Some(gltf_mesh) = node.mesh.clone() {
+                let gltf_mesh = gltf_mesh_assets.get(&gltf_mesh).unwrap();
+                for mesh_primitive in &gltf_mesh.primitives {
+                    let mesh = mesh_assets.get(&mesh_primitive.mesh).unwrap();
+                    commands.spawn((
+                        Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap(),
+                        RigidBody::Fixed,
+                        TransformBundle::from_transform(node.transform),
+                    ));
+                }
+            }
+        }
+        main_scene.is_loaded = true;
+    }
+}
+
+fn manage_cursor(
+    btn: Res<Input<MouseButton>>,
+    key: Res<Input<KeyCode>>,
+    mut window_query: Query<&mut Window>,
+    mut controller_query: Query<&mut FpsController>,
+) {
+    let mut window = window_query.single_mut();
+    if btn.just_pressed(MouseButton::Left) {
+        window.cursor.grab_mode = CursorGrabMode::Locked;
+        window.cursor.visible = false;
+        for mut controller in &mut controller_query {
+            controller.enable_input = true;
+        }
+    }
     if key.just_pressed(KeyCode::Escape) {
-        window.cursor.visible = true;
         window.cursor.grab_mode = CursorGrabMode::None;
+        window.cursor.visible = true;
+        for mut controller in &mut controller_query {
+            controller.enable_input = false;
+        }
+    }
+}
+
+fn display_text(
+    mut controller_query: Query<(&Transform, &Velocity)>,
+    mut text_query: Query<&mut Text>,
+) {
+    for (transform, velocity) in &mut controller_query {
+        for mut text in &mut text_query {
+            text.sections[0].value = format!(
+                "vel: {:.2}, {:.2}, {:.2}\npos: {:.2}, {:.2}, {:.2}\nspd: {:.2}",
+                velocity.linvel.x,
+                velocity.linvel.y,
+                velocity.linvel.z,
+                transform.translation.x,
+                transform.translation.y,
+                transform.translation.z,
+                velocity.linvel.xz().length()
+            );
+        }
     }
 }
