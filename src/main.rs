@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::CursorGrabMode};
+use bevy::{gltf::Gltf, gltf::GltfMesh, gltf::GltfNode, prelude::*, window::CursorGrabMode};
 use bevy_atmosphere::prelude::*;
 use bevy_rapier3d::{control::KinematicCharacterController, dynamics::RigidBody, prelude::*};
 use courier::controller::*;
@@ -13,24 +13,50 @@ fn main() {
         .add_systems(Startup, spawn_gltf)
         .add_systems(Update, grab_mouse)
         .add_plugins(CameraControllerPlugin)
-        .add_systems(Update, player_pos)
+        .add_systems(Update, setup_collision_for_imported_meshes)
         .run();
 }
 
-fn spawn_gltf(mut commands: Commands, ass: Res<AssetServer>) {
-    let my_gltf = ass.load("../assets/Apartment 2.glb#Scene0");
+#[derive(Bundle)]
+struct MainMeshBundle {
+    collider: Collider,
+    rigid_body: RigidBody,
+    transform: TransformBundle,
+}
+
+#[derive(Component)]
+struct ImportedGLTF;
+
+fn spawn_gltf(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let gltf_scene: Handle<Scene> = asset_server.load("../assets/Apartment 2.glb#Scene0");
 
     commands
-        .spawn((
-            RigidBody::Fixed,
-            SceneBundle {
-                scene: my_gltf,
-                transform: Transform::from_xyz(0.0, -3.0, 0.0),
-                ..default()
-            },
-        ))
-        .insert(Collider::cuboid(5.0, 5.0, 5.0))
-        .insert(TransformBundle::from(Transform::from_xyz(0.0, -3.0, 0.0)));
+        .spawn(SceneBundle {
+            scene: gltf_scene,
+            transform: Transform::from_xyz(0.0, -5.0, 0.0),
+            ..default()
+        })
+        .insert(ImportedGLTF);
+}
+
+fn setup_collision_for_imported_meshes(
+    mut commands: Commands,
+    query: Query<&Handle<Mesh>, With<ImportedGLTF>>,
+    meshes: ResMut<Assets<Mesh>>,
+) {
+    for mesh_handle in query.iter() {
+        if let Some(mesh) = meshes.get(&*mesh_handle) {
+            let collider = Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh)
+                .expect("Couldn't load mesh");
+            commands
+                .spawn(MainMeshBundle {
+                    collider,
+                    rigid_body: RigidBody::Fixed,
+                    transform: TransformBundle::from_transform(Transform::from_xyz(0.0, -5.0, 0.0)),
+                })
+                .insert(ActiveCollisionTypes::KINEMATIC_STATIC);
+        }
+    }
 }
 
 fn setup(mut commands: Commands) {
@@ -46,8 +72,9 @@ fn setup(mut commands: Commands) {
 
     commands
         .spawn((
-            Collider::ball(3.5),
+            Collider::ball(0.5),
             RigidBody::Dynamic,
+            ActiveCollisionTypes::DYNAMIC_KINEMATIC,
             Ccd { enabled: true },
             Camera3dBundle {
                 projection: Projection::Perspective(PerspectiveProjection {
@@ -95,14 +122,5 @@ fn grab_mouse(
     if key.just_pressed(KeyCode::Escape) {
         window.cursor.visible = true;
         window.cursor.grab_mode = CursorGrabMode::None;
-    }
-}
-
-fn player_pos(
-    player_queer: Query<&KinematicCharacterController>,
-    mut text_query: Query<&mut Text>,
-) {
-    for player in player_queer.iter() {
-        println!("Niggers: {:?}", player.translation);
     }
 }
