@@ -1,5 +1,8 @@
-use std::f32::consts::TAU;
+use std::env;
+use std::f32::consts::{PI, TAU};
 
+use bevy::core_pipeline::bloom::BloomSettings;
+use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::{
     gltf::Gltf,
     gltf::{GltfMesh, GltfNode},
@@ -7,9 +10,12 @@ use bevy::{
     prelude::*,
     window::CursorGrabMode,
 };
+use bevy_atmosphere::plugin::{AtmosphereCamera, AtmospherePlugin};
 use bevy_rapier3d::prelude::*;
 
+use bevy::pbr::DirectionalLightShadowMap;
 use bevy_fps_controller::controller::*;
+use courier::grid::GridLines;
 
 const SPAWN_POINT: Vec3 = Vec3::new(0.0, 1.0, 0.0);
 
@@ -17,36 +23,66 @@ fn main() {
     App::new()
         .insert_resource(AmbientLight {
             color: Color::WHITE,
-            brightness: 0.5,
+            brightness: 0.3,
         })
+        .insert_resource(Msaa::Sample4)
+        .insert_resource(DirectionalLightShadowMap { size: 4096 })
         .insert_resource(ClearColor(Color::hex("D4F5F5").unwrap()))
         .insert_resource(RapierConfiguration::default())
         .add_plugins(DefaultPlugins)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_plugins(FpsControllerPlugin)
+        .add_plugins(AtmospherePlugin)
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (manage_cursor, scene_colliders, display_text, respawn),
         )
+        //.add_plugins(GridLines)
         .run();
+
+    env::set_var("RUST_BACKTRACE", "1");
 }
 
-fn setup(mut commands: Commands, mut window: Query<&mut Window>, assets: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    mut window: Query<&mut Window>,
+    assets: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     let mut window = window.single_mut();
     window.title = String::from("Courier");
     // commands.spawn(Window { title: "Minimal FPS Controller Example".to_string(), ..default() });
 
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            illuminance: 6000.0,
-            shadows_enabled: true,
+    commands
+        .spawn(PointLightBundle {
+            transform: Transform::from_xyz(0., 2.5, 0.).looking_at(Vec3::new(0., 0., 0.), Vec3::Z),
+
+            point_light: PointLight {
+                intensity: 600.0,
+                color: Color::WHITE,
+                shadows_enabled: true,
+                ..default()
+            },
             ..default()
-        },
-        transform: Transform::from_xyz(4.0, 7.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+        })
+        .with_children(|builder| {
+            builder.spawn(PbrBundle {
+                transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.0)),
+                mesh: meshes.add(Mesh::from(shape::UVSphere {
+                    radius: 0.1,
+                    ..default()
+                })),
+                material: materials.add(StandardMaterial {
+                    base_color: Color::YELLOW,
+                    emissive: Color::rgba_linear(0.0, 0., 0., 0.),
+                    ..default()
+                }),
+                ..default()
+            });
+        });
 
     // Note that we have two entities for the player
     // One is a "logical" player that handles the physics computation and collision
@@ -92,17 +128,23 @@ fn setup(mut commands: Commands, mut window: Query<&mut Window>, assets: Res<Ass
 
     commands.spawn((
         Camera3dBundle {
+            camera: Camera {
+                hdr: true,
+                ..default()
+            },
             projection: Projection::Perspective(PerspectiveProjection {
                 fov: TAU / 5.0,
                 ..default()
             }),
             ..default()
         },
+        BloomSettings::OLD_SCHOOL,
         RenderPlayer { logical_entity },
+        AtmosphereCamera::default(),
     ));
 
     commands.insert_resource(MainScene {
-        handle: assets.load("untitled.glb"),
+        handle: assets.load("warehouse.glb"),
         is_loaded: false,
     });
 
