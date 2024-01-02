@@ -2,20 +2,13 @@ use std::env;
 use std::f32::consts::{PI, TAU};
 
 use bevy::core_pipeline::bloom::BloomSettings;
-use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::{
-    gltf::Gltf,
-    gltf::{GltfMesh, GltfNode},
-    math::Vec3Swizzles,
-    prelude::*,
-    window::CursorGrabMode,
-};
+use bevy::{math::Vec3Swizzles, prelude::*, window::CursorGrabMode};
 use bevy_atmosphere::plugin::{AtmosphereCamera, AtmospherePlugin};
 use bevy_rapier3d::prelude::*;
 
 use bevy::pbr::DirectionalLightShadowMap;
 use bevy_fps_controller::controller::*;
-use courier::grid::GridLines;
+use courier::levels::asset_loader_plugin::AssetLoaderPlugin;
 
 const SPAWN_POINT: Vec3 = Vec3::new(0.0, 1.0, 0.0);
 
@@ -35,10 +28,8 @@ fn main() {
         .add_plugins(FpsControllerPlugin)
         .add_plugins(AtmospherePlugin)
         .add_systems(Startup, setup)
-        .add_systems(
-            Update,
-            (manage_cursor, scene_colliders, display_text, respawn),
-        )
+        .add_plugins(AssetLoaderPlugin)
+        .add_systems(Update, (manage_cursor, display_text, respawn))
         //.add_plugins(GridLines)
         .run();
 
@@ -48,7 +39,6 @@ fn main() {
 fn setup(
     mut commands: Commands,
     mut window: Query<&mut Window>,
-    assets: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -143,11 +133,6 @@ fn setup(
         AtmosphereCamera::default(),
     ));
 
-    commands.insert_resource(MainScene {
-        handle: assets.load("warehouse.glb"),
-        is_loaded: false,
-    });
-
     commands.spawn(
         TextBundle::from_section(
             "",
@@ -174,47 +159,6 @@ fn respawn(mut query: Query<(&mut Transform, &mut Velocity)>) {
 
         velocity.linvel = Vec3::ZERO;
         transform.translation = SPAWN_POINT;
-    }
-}
-
-#[derive(Resource)]
-struct MainScene {
-    handle: Handle<Gltf>,
-    is_loaded: bool,
-}
-
-fn scene_colliders(
-    mut commands: Commands,
-    mut main_scene: ResMut<MainScene>,
-    gltf_assets: Res<Assets<Gltf>>,
-    gltf_mesh_assets: Res<Assets<GltfMesh>>,
-    gltf_node_assets: Res<Assets<GltfNode>>,
-    mesh_assets: Res<Assets<Mesh>>,
-) {
-    if main_scene.is_loaded {
-        return;
-    }
-
-    let gltf = gltf_assets.get(&main_scene.handle);
-
-    if let Some(gltf) = gltf {
-        let scene = gltf.scenes.first().unwrap().clone();
-        commands.spawn(SceneBundle { scene, ..default() });
-        for node in &gltf.nodes {
-            let node = gltf_node_assets.get(node).unwrap();
-            if let Some(gltf_mesh) = node.mesh.clone() {
-                let gltf_mesh = gltf_mesh_assets.get(&gltf_mesh).unwrap();
-                for mesh_primitive in &gltf_mesh.primitives {
-                    let mesh = mesh_assets.get(&mesh_primitive.mesh).unwrap();
-                    commands.spawn((
-                        Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap(),
-                        RigidBody::Fixed,
-                        TransformBundle::from_transform(node.transform),
-                    ));
-                }
-            }
-        }
-        main_scene.is_loaded = true;
     }
 }
 
