@@ -10,8 +10,12 @@ impl Plugin for PlayerRaycast {
     }
 }
 
-fn raycast(query: Query<(&Transform, &Collider)>, physics_context: Res<RapierContext>) {
+fn raycast(
+    query: Query<(&Transform, &Collider), With<LogicalPlayer>>,
+    physics_context: Res<RapierContext>,
+) {
     for (transform, colliders) in query.iter() {
-        //println!("Collider: {:?}", colliders);
+        // println!("Collider: {:?}", colliders);
+        println!("{:?}", transform.looking_to(Vec3::Z, Vec3::Y));
     }
 }

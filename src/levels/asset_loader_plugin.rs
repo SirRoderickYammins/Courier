@@ -3,6 +3,7 @@
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
 
 pub struct AssetLoaderPlugin;
 impl Plugin for AssetLoaderPlugin {
@@ -14,7 +15,9 @@ impl Plugin for AssetLoaderPlugin {
                 check_load_complete.run_if(in_state(AssetLoaderState::Loading)),
             )
             .add_systems(OnEnter(AssetLoaderState::Done), load_scene)
-            .add_systems(Update, spawn_box.run_if(in_state(AssetLoaderState::Done)));
+            .add_systems(Update, spawn_box.run_if(in_state(AssetLoaderState::Done)))
+            .add_systems(OnEnter(AssetLoaderState::Done), generate_colliders)
+            .add_systems(Update, display_collisons);
     }
 }
 
@@ -28,8 +31,14 @@ pub enum AssetLoaderState {
     Done,
 }
 
+// I found it was best to have one central resource to contain all GLTF files to be accessed.
+// It is also easier to have separate GLTF files for each entity that you wish to spawn.
+
 #[derive(Resource, Debug)]
-pub struct MyAssetPack(pub Handle<Gltf>);
+pub struct MyAssetPack {
+    main_scene: Handle<Gltf>,
+    package: Handle<Gltf>,
+}
 
 const ASSET_PATH: &str = "starting_warehouse.glb";
 
@@ -37,8 +46,12 @@ fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     //Load the asset, store the handle in the MyAssetPack struct.
 
     let gltf: Handle<Gltf> = asset_server.load(ASSET_PATH);
+    let package: Handle<Gltf> = asset_server.load("box.glb");
 
-    commands.insert_resource(MyAssetPack(gltf));
+    commands.insert_resource(MyAssetPack {
+        main_scene: gltf,
+        package,
+    });
 }
 
 fn check_load_complete(
@@ -47,42 +60,58 @@ fn check_load_complete(
     mut asset_events: EventReader<AssetEvent<Gltf>>,
 ) {
     for event in asset_events.read() {
-        if event.is_loaded_with_dependencies(asset_pack.0.clone()) {
+        if event.is_loaded_with_dependencies(asset_pack.main_scene.clone()) {
             next_state.set(AssetLoaderState::Done);
             println!("Asset Loaded");
         }
     }
 }
 
-#[derive(Debug, Resource)]
-pub struct BoxComponent(pub Handle<Scene>);
-
 fn load_scene(
     mut commands: Commands,
     asset_pack: Res<MyAssetPack>,
     assets_gltf: Res<Assets<Gltf>>,
 ) {
-    if let Some(gltf) = assets_gltf.get(&asset_pack.0) {
-        println!("Named scenes: {:?}", gltf.named_scenes);
+    if let Some(gltf) = assets_gltf.get(&asset_pack.main_scene) {
         commands.spawn(SceneBundle {
             scene: gltf.named_scenes["Scene"].clone(),
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
         });
-        commands.insert_resource(BoxComponent(gltf.named_scenes["Scene.001"].clone()));
     }
 }
 
 fn spawn_box(
     mut commands: Commands,
-    my_box_component: Res<BoxComponent>,
     input: Res<Input<KeyCode>>,
+    asset_pack: Res<MyAssetPack>,
+    assets_gltf: Res<Assets<Gltf>>,
 ) {
-    if input.pressed(KeyCode::G) {
-        commands.spawn(SceneBundle {
-            scene: my_box_component.0.clone(),
-            transform: Transform::from_xyz(0., 0., 0.),
-            ..default()
-        });
+    if let Some(gltf) = assets_gltf.get(&asset_pack.package) {
+        if input.pressed(KeyCode::G) {
+            commands.spawn((
+                SceneBundle {
+                    scene: gltf.named_scenes["Scene"].clone(),
+                    ..default()
+                },
+                Collider::cuboid(0.5, 0.5, 0.5),
+                Friction::coefficient(1.7),
+                RigidBody::Dynamic,
+            ));
+        }
     }
+}
+
+fn display_collisons(mut collision_events: EventReader<CollisionEvent>) {
+    for collision_event in collision_events.read() {
+        println!("Collision! {:?}", collision_event);
+    }
+}
+
+fn generate_colliders(mut commands: Commands) {
+    commands.spawn((
+        Collider::cuboid(8.0, 0.1, 8.0),
+        RigidBody::Fixed,
+        Transform::from_xyz(0., 0., 0.),
+    ));
 }

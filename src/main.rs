@@ -9,6 +9,7 @@ use bevy_rapier3d::prelude::*;
 use bevy::pbr::DirectionalLightShadowMap;
 use bevy_fps_controller::controller::*;
 use courier::levels::asset_loader_plugin::AssetLoaderPlugin;
+use courier::raycasting::PlayerRaycast;
 
 const SPAWN_POINT: Vec3 = Vec3::new(0.0, 1.0, 0.0);
 
@@ -30,7 +31,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_plugins(AssetLoaderPlugin)
         .add_systems(Update, (manage_cursor, display_text, respawn))
-        //.add_plugins(GridLines)
+        .add_plugins(PlayerRaycast)
         .run();
 
     env::set_var("RUST_BACKTRACE", "1");
