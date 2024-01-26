@@ -17,7 +17,8 @@ impl Plugin for AssetLoaderPlugin {
             .add_systems(OnEnter(AssetLoaderState::Done), load_scene)
             .add_systems(Update, spawn_box.run_if(in_state(AssetLoaderState::Done)))
             .add_systems(OnEnter(AssetLoaderState::Done), generate_colliders)
-            .add_systems(Update, display_collisons);
+            .add_systems(Update, move_main_collider);
+        //.add_systems(Update, display_collisons);
     }
 }
 
@@ -81,6 +82,13 @@ fn load_scene(
     }
 }
 
+#[derive(Component, Debug)]
+pub struct Package {
+    destination: String,
+    weight: f32,
+    hazmat: bool,
+}
+
 fn spawn_box(
     mut commands: Commands,
     input: Res<Input<KeyCode>>,
@@ -92,11 +100,17 @@ fn spawn_box(
             commands.spawn((
                 SceneBundle {
                     scene: gltf.named_scenes["Scene"].clone(),
+                    transform: Transform::from_xyz(0., 2.5, 0.),
                     ..default()
                 },
                 Collider::cuboid(0.5, 0.5, 0.5),
                 Friction::coefficient(1.7),
                 RigidBody::Dynamic,
+                Package {
+                    destination: "Nigeria".to_string(),
+                    weight: 12.0,
+                    hazmat: true,
+                },
             ));
         }
     }
@@ -107,11 +121,39 @@ fn display_collisons(mut collision_events: EventReader<CollisionEvent>) {
         println!("Collision! {:?}", collision_event);
     }
 }
+//TODO: Figure out how the ECS works...
+
+fn move_main_collider(
+    input: Res<Input<KeyCode>>,
+    mut query: Query<&mut Transform, With<MainSceneCollider>>,
+) {
+    if input.pressed(KeyCode::J) {
+        for mut collider in query.iter_mut() {
+            collider.translation.y += 0.1;
+        }
+    }
+}
+
+#[derive(Bundle, Debug)]
+struct ColliderBundle {
+    collider_shape: Collider,
+    rigid_body_type: RigidBody,
+    transform: TransformBundle,
+}
+
+#[derive(Component, Debug)]
+pub struct MainSceneCollider;
+
+//TODO: Create either an Enum/Struct in a separate file (for cleanliness) to contain
+//the transforms and sizes of the colliders for the walls and other map surfaces.
 
 fn generate_colliders(mut commands: Commands) {
     commands.spawn((
-        Collider::cuboid(8.0, 0.1, 8.0),
-        RigidBody::Fixed,
-        Transform::from_xyz(0., 0., 0.),
+        MainSceneCollider,
+        ColliderBundle {
+            collider_shape: Collider::cuboid(8.0, 0.1, 8.0),
+            rigid_body_type: RigidBody::Fixed,
+            transform: TransformBundle::from(Transform::from_xyz(0., -0.1, 0.)),
+        },
     ));
 }

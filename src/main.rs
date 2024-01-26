@@ -2,7 +2,7 @@ use std::env;
 use std::f32::consts::{PI, TAU};
 
 use bevy::core_pipeline::bloom::BloomSettings;
-use bevy::{math::Vec3Swizzles, prelude::*, window::CursorGrabMode};
+use bevy::{prelude::*, window::CursorGrabMode};
 use bevy_atmosphere::plugin::{AtmosphereCamera, AtmospherePlugin};
 use bevy_rapier3d::prelude::*;
 
@@ -25,12 +25,12 @@ fn main() {
         .insert_resource(RapierConfiguration::default())
         .add_plugins(DefaultPlugins)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
-        // .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins(RapierDebugRenderPlugin::default())
         .add_plugins(FpsControllerPlugin)
         .add_plugins(AtmospherePlugin)
         .add_systems(Startup, setup)
         .add_plugins(AssetLoaderPlugin)
-        .add_systems(Update, (manage_cursor, display_text, respawn))
+        .add_systems(Update, (manage_cursor, respawn))
         .add_plugins(PlayerRaycast)
         .run();
 
@@ -182,26 +182,6 @@ fn manage_cursor(
         window.cursor.visible = true;
         for mut controller in &mut controller_query {
             controller.enable_input = false;
-        }
-    }
-}
-
-fn display_text(
-    mut controller_query: Query<(&Transform, &Velocity)>,
-    mut text_query: Query<&mut Text>,
-) {
-    for (transform, velocity) in &mut controller_query {
-        for mut text in &mut text_query {
-            text.sections[0].value = format!(
-                "vel: {:.2}, {:.2}, {:.2}\npos: {:.2}, {:.2}, {:.2}\nspd: {:.2}",
-                velocity.linvel.x,
-                velocity.linvel.y,
-                velocity.linvel.z,
-                transform.translation.x,
-                transform.translation.y,
-                transform.translation.z,
-                velocity.linvel.xz().length()
-            );
         }
     }
 }
