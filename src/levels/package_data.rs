@@ -4,7 +4,6 @@ use rand::{thread_rng, Rng};
 
 #[derive(Component, Clone, Debug)]
 pub struct Package {
-    pub transform: Transform,
     pub recipient_name: String,
     pub street_address: String,
     pub country: String,
@@ -14,7 +13,7 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn new(transform: Transform) -> Self {
+    pub fn new() -> Self {
         let rand_num_name = thread_rng().gen_range(0..NAMES.len());
         let rand_num_street = thread_rng().gen_range(0..STREET_NAMES.len());
         let rand_num_countries = thread_rng().gen_range(0..COUNTRIES.len());
@@ -22,7 +21,6 @@ impl Package {
         let rand_weight: f32 = thread_rng().gen_range(0.0..150.0);
 
         Package {
-            transform,
             recipient_name: NAMES[rand_num_name].to_string(),
             street_address: STREET_NAMES[rand_num_street].to_string(),
             country: COUNTRIES[rand_num_countries].to_string(),

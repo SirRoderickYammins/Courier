@@ -17,8 +17,9 @@ impl Plugin for PlayerRaycast {
 fn raycast(
     query: Query<&Transform, With<Camera>>,
     _physics_context: Res<RapierContext>,
-    package_query: Query<&Package>,
+    mut package_query: Query<(&Package, &mut Transform), (With<Package>, Without<Camera>)>,
     mut text_query: Query<&mut Text, With<PackageInfoText>>,
+    input: Res<Input<KeyCode>>,
 ) {
     //Set mutable empty vec 3, will update with each loop.
     let mut ray_origin = Vec3::ZERO;
@@ -27,6 +28,8 @@ fn raycast(
     let max_toi = 4.0;
     let solid = true;
     let filter = QueryFilter::exclude_fixed();
+
+    let mut playerholding = false;
 
     for camera_transform in query.iter() {
         ray_origin = camera_transform.translation;
@@ -37,7 +40,7 @@ fn raycast(
     if let Some((entity, _toi)) =
         _physics_context.cast_ray(ray_origin, ray_dir, max_toi, solid, filter)
     {
-        if let Ok(package_item) = package_query.get(entity) {
+        if let Ok((package_item, mut transform)) = package_query.get_mut(entity) {
             for mut text in &mut text_query {
                 text.sections[0].value = format!(
                     "Name: {}\nAddr:{}\nCountry:{}\nZIP:{}\nWeight:{:.2}",
@@ -47,6 +50,15 @@ fn raycast(
                     package_item.zip_code,
                     package_item.weight,
                 );
+            }
+
+            if input.pressed(KeyCode::E) {
+                playerholding = true;
+            }
+
+            if playerholding {
+                ray_origin.z -= 2.0;
+                transform.translation = ray_origin;
             }
         }
     }

@@ -102,7 +102,8 @@ fn spawn_box(
                 Collider::cuboid(0.5, 0.5, 0.5),
                 Friction::coefficient(1.2),
                 RigidBody::Dynamic,
-                Package::new(Transform::from_xyz(0., 2.5, 0.)),
+                Dominance::group(2),
+                Package::new(),
             ));
         }
     }
