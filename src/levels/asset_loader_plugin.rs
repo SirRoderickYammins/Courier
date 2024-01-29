@@ -5,6 +5,8 @@ use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
+use crate::levels::package_data::Package;
+
 pub struct AssetLoaderPlugin;
 impl Plugin for AssetLoaderPlugin {
     fn build(&self, app: &mut App) {
@@ -16,9 +18,7 @@ impl Plugin for AssetLoaderPlugin {
             )
             .add_systems(OnEnter(AssetLoaderState::Done), load_scene)
             .add_systems(Update, spawn_box.run_if(in_state(AssetLoaderState::Done)))
-            .add_systems(OnEnter(AssetLoaderState::Done), generate_colliders)
-            .add_systems(Update, move_main_collider);
-        //.add_systems(Update, display_collisons);
+            .add_systems(OnEnter(AssetLoaderState::Done), generate_colliders);
     }
 }
 
@@ -82,13 +82,6 @@ fn load_scene(
     }
 }
 
-#[derive(Component, Debug)]
-pub struct Package {
-    destination: String,
-    weight: f32,
-    hazmat: bool,
-}
-
 fn spawn_box(
     mut commands: Commands,
     input: Res<Input<KeyCode>>,
@@ -106,30 +99,8 @@ fn spawn_box(
                 Collider::cuboid(0.5, 0.5, 0.5),
                 Friction::coefficient(1.7),
                 RigidBody::Dynamic,
-                Package {
-                    destination: "Nigeria".to_string(),
-                    weight: 12.0,
-                    hazmat: true,
-                },
+                Package::new(),
             ));
-        }
-    }
-}
-
-fn display_collisons(mut collision_events: EventReader<CollisionEvent>) {
-    for collision_event in collision_events.read() {
-        println!("Collision! {:?}", collision_event);
-    }
-}
-//TODO: Figure out how the ECS works...
-
-fn move_main_collider(
-    input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Transform, With<MainSceneCollider>>,
-) {
-    if input.pressed(KeyCode::J) {
-        for mut collider in query.iter_mut() {
-            collider.translation.y += 0.1;
         }
     }
 }

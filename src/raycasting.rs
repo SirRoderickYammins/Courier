@@ -1,14 +1,13 @@
+use crate::levels::package_data::Package;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-
-use crate::levels::asset_loader_plugin::Package;
 
 pub struct PlayerRaycast;
 
 impl Plugin for PlayerRaycast {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, raycast);
-        app.add_systems(Update, display_info);
+        app.add_systems(Startup, display_info);
     }
 }
 
@@ -17,9 +16,9 @@ impl Plugin for PlayerRaycast {
 
 fn raycast(
     query: Query<&Transform, With<Camera>>,
-    mut commands: Commands,
     _physics_context: Res<RapierContext>,
     package_query: Query<&Package>,
+    mut text_query: Query<&mut Text, With<PackageInfoText>>,
 ) {
     //Set mutable empty vec 3, will update with each loop.
     let mut ray_origin = Vec3::ZERO;
@@ -39,22 +38,36 @@ fn raycast(
         ray_dir = camera_transform.forward();
     }
 
-    if let Some((entity, toi)) =
+    if let Some((entity, _toi)) =
         _physics_context.cast_ray(ray_origin, ray_dir, max_toi, solid, filter)
     {
-        println!("{:?}", package_query.get(entity));
-        display_info(package_query.get(entity));
-
-        // Get Entity Data here.
+        if let Ok(package_ent) = package_query.get(entity) {
+            for mut text in &mut text_query {
+                text.sections[0].value = format!(
+                    "Name: {}\nAddr:{}\nCountry:{}\nZIP:{}\nWeight:{:.2}",
+                    package_ent.recipient_name,
+                    package_ent.street_address,
+                    package_ent.country,
+                    package_ent.zip_code,
+                    package_ent.weight
+                );
+            }
+        }
     }
 }
 
-fn display_info(mut commands: Commands, package: Entity) {
-    commands.spawn(TextBundle::from_section(
-        "Your Mother",
-        TextStyle {
-            font_size: 100.0,
-            ..default()
-        },
+#[derive(Component)]
+pub struct PackageInfoText;
+
+fn display_info(mut commands: Commands) {
+    commands.spawn((
+        TextBundle::from_section(
+            "",
+            TextStyle {
+                font_size: 40.0,
+                ..default()
+            },
+        ),
+        PackageInfoText,
     ));
 }
