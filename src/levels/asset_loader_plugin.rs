@@ -55,6 +55,9 @@ fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
+// Extract mesh from GLTF in order to have Rapier compute a collider shape. General function
+// structure allows for multiple models and levels to bew made with ease.
+
 fn check_load_complete(
     asset_pack: Res<MyAssetPack>,
     mut next_state: ResMut<NextState<AssetLoaderState>>,
@@ -97,9 +100,9 @@ fn spawn_box(
                     ..default()
                 },
                 Collider::cuboid(0.5, 0.5, 0.5),
-                Friction::coefficient(1.7),
+                Friction::coefficient(1.2),
                 RigidBody::Dynamic,
-                Package::new(),
+                Package::new(Transform::from_xyz(0., 2.5, 0.)),
             ));
         }
     }
