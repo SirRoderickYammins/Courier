@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 // Package components to be defined here.
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, PartialEq, Debug)]
 pub struct Package {
     pub recipient_name: String,
     pub street_address: String,

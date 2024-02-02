@@ -2,7 +2,9 @@
 // assets will be created in a general format to be applied in any manner.
 
 use bevy::gltf::Gltf;
+use bevy::math::vec4;
 use bevy::prelude::*;
+use bevy_mod_picking::prelude::*;
 use bevy_rapier3d::prelude::*;
 
 use crate::levels::package_data::Package;
@@ -18,7 +20,8 @@ impl Plugin for AssetLoaderPlugin {
             )
             .add_systems(OnEnter(AssetLoaderState::Done), load_scene)
             .add_systems(Update, spawn_box.run_if(in_state(AssetLoaderState::Done)))
-            .add_systems(OnEnter(AssetLoaderState::Done), generate_colliders);
+            .add_systems(OnEnter(AssetLoaderState::Done), generate_colliders)
+            .add_plugins(DefaultPickingPlugins);
     }
 }
 
@@ -102,12 +105,32 @@ fn spawn_box(
                 Collider::cuboid(0.5, 0.5, 0.5),
                 Friction::coefficient(1.2),
                 RigidBody::Dynamic,
-                Dominance::group(2),
+                Dominance::group(0),
                 Package::new(),
+                PickableBundle::default(),
+                HIGHLIGHT_TINT,
+                On::<Pointer<Click>>::run(|event: Listener<Pointer<Click>>| {
+                    info!("Clicked on box {:?}", event.target);
+                }),
             ));
         }
     }
 }
+
+const HIGHLIGHT_TINT: Highlight<StandardMaterial> = Highlight {
+    hovered: Some(HighlightKind::new_dynamic(|matl| StandardMaterial {
+        base_color: matl.base_color + vec4(-0.5, -0.3, 0.9, 0.8),
+        ..matl.to_owned()
+    })),
+    pressed: Some(HighlightKind::new_dynamic(|matl| StandardMaterial {
+        base_color: matl.base_color + vec4(-0.4, -0.4, 0.8, 0.8),
+        ..matl.to_owned()
+    })),
+    selected: Some(HighlightKind::new_dynamic(|matl| StandardMaterial {
+        base_color: matl.base_color + vec4(-0.4, 0.8, -0.4, 0.0),
+        ..matl.to_owned()
+    })),
+};
 
 #[derive(Bundle, Debug)]
 struct ColliderBundle {

@@ -176,6 +176,17 @@ fn manage_cursor(
     let center = Some(Vec2::new(window.1.width() / 2.0, window.1.height() / 2.0));
     if window.1.cursor.grab_mode == CursorGrabMode::Locked {
         window.1.set_cursor_position(center);
+        for mut pointer in &mut pointer {
+            pointer.location = Some(pointer::Location {
+                target: RenderTarget::Window(WindowRef::Primary)
+                    .normalize(window.ok().map(|w| w.0))
+                    .unwrap(),
+                position: Vec2 {
+                    x: center.unwrap().x,
+                    y: center.unwrap().y,
+                },
+            })
+        }
     }
     if btn.just_pressed(MouseButton::Left) {
         window.1.cursor.grab_mode = CursorGrabMode::Locked;
@@ -190,16 +201,5 @@ fn manage_cursor(
         for mut controller in &mut controller_query {
             controller.enable_input = false;
         }
-    }
-    for mut pointer in &mut pointer {
-        pointer.location = Some(pointer::Location {
-            target: RenderTarget::Window(WindowRef::Primary)
-                .normalize(window_query.get_single().ok().map(|w| w.0))
-                .unwrap(),
-            position: Vec2 {
-                x: center.unwrap().x,
-                y: center.unwrap().y,
-            },
-        })
     }
 }
