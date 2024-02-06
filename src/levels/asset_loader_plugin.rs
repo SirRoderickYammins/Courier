@@ -8,6 +8,7 @@ use bevy_mod_picking::prelude::*;
 use bevy_rapier3d::prelude::*;
 
 use crate::levels::package_data::Package;
+use crate::tools::gltf::GltfToolsPlugin;
 
 pub struct AssetLoaderPlugin;
 impl Plugin for AssetLoaderPlugin {
@@ -20,7 +21,7 @@ impl Plugin for AssetLoaderPlugin {
             )
             .add_systems(OnEnter(AssetLoaderState::Done), load_scene)
             .add_systems(Update, spawn_box.run_if(in_state(AssetLoaderState::Done)))
-            .add_systems(OnEnter(AssetLoaderState::Done), generate_colliders)
+            .add_plugins(GltfToolsPlugin)
             .add_plugins(DefaultPickingPlugins);
     }
 }
@@ -40,8 +41,8 @@ pub enum AssetLoaderState {
 
 #[derive(Resource, Debug)]
 pub struct MyAssetPack {
-    main_scene: Handle<Gltf>,
-    package: Handle<Gltf>,
+    pub main_scene: Handle<Gltf>,
+    pub package: Handle<Gltf>,
 }
 
 const ASSET_PATH: &str = "starting_warehouse.glb";

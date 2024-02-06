@@ -6,7 +6,7 @@ use std::env;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(RapierDebugRenderPlugin::default())
+        //.add_plugins(RapierDebugRenderPlugin::default())
         .add_plugins(CharacterController)
         .run();
 
