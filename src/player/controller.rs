@@ -1,6 +1,7 @@
-use crate::levels::asset_loader_plugin::AssetLoaderPlugin;
+use crate::levels::asset_loader_plugin::{AssetLoaderPlugin, AssetLoaderState, MyAssetPack};
 use crate::raycasting::PlayerRaycast;
 use bevy::core_pipeline::bloom::BloomSettings;
+use bevy::gltf::Gltf;
 use bevy::pbr::DirectionalLightShadowMap;
 use bevy::render::camera::RenderTarget;
 use bevy::window::WindowRef;
@@ -10,6 +11,8 @@ use bevy_fps_controller::controller::*;
 use bevy_mod_picking::prelude::*;
 use bevy_rapier3d::prelude::*;
 use std::f32::consts::{PI, TAU};
+
+use super::items::scanner::ScannerTool;
 pub struct CharacterController;
 
 impl Plugin for CharacterController {
@@ -19,7 +22,7 @@ impl Plugin for CharacterController {
             .add_plugins(FpsControllerPlugin)
             .add_plugins(PlayerRaycast)
             .add_plugins(AtmospherePlugin)
-            .add_systems(Startup, setup)
+            .add_systems(OnEnter(AssetLoaderState::Done), setup)
             .add_plugins(AssetLoaderPlugin)
             .insert_resource(DirectionalLightShadowMap { size: 4096 })
             .insert_resource(AmbientLight {
@@ -42,6 +45,8 @@ fn setup(
     mut window: Query<&mut Window>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_pack: Res<MyAssetPack>,
+    assets_gltf: Res<Assets<Gltf>>,
 ) {
     let mut window = window.single_mut();
     window.title = String::from("Courier");
@@ -116,25 +121,39 @@ fn setup(
         })
         .id();
 
-    commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                hdr: true,
-                ..default()
-            },
-            projection: Projection::Perspective(PerspectiveProjection {
-                fov: TAU / 5.0,
-                ..default()
-            }),
-            ..default()
-        },
-        PlayerInteractionSystem {
-            is_holding_item: false,
-        },
-        BloomSettings::OLD_SCHOOL,
-        RenderPlayer { logical_entity },
-        AtmosphereCamera::default(),
-    ));
+    if let Some(scanner) = assets_gltf.get(&asset_pack.scanner) {
+        commands
+            .spawn((
+                Camera3dBundle {
+                    camera: Camera {
+                        hdr: true,
+                        ..default()
+                    },
+                    projection: Projection::Perspective(PerspectiveProjection {
+                        fov: TAU / 5.0,
+                        ..default()
+                    }),
+                    ..default()
+                },
+                PlayerInteractionSystem {
+                    is_holding_item: false,
+                },
+                BloomSettings::OLD_SCHOOL,
+                RenderPlayer { logical_entity },
+                AtmosphereCamera::default(),
+            ))
+            .with_children(|cam| {
+                cam.spawn((
+                    SceneBundle {
+                        scene: scanner.named_scenes["Scene"].clone(),
+                        transform: Transform::from_xyz(0.3, -0.2, -0.5),
+
+                        ..default()
+                    },
+                    ScannerTool,
+                ));
+            });
+    }
 
     commands.spawn(
         TextBundle::from_section(

@@ -10,12 +10,6 @@ impl Plugin for PlayerRaycast {
     }
 }
 
-#[derive(Clone)]
-enum ItemHeld {
-    HoldingPackage,
-    HandsFree,
-}
-
 // Lazily calling Camera transform. There's only one camera, so no need for a special marker.
 // Transform has a method for getting forward vector; to be used with Rapier's raycast.
 

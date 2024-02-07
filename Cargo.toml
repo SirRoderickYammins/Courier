@@ -9,7 +9,7 @@ edition = "2021"
 opt-level = 3
 
 [dependencies]
-bevy = "0.12.1"
+bevy = {version = "0.12.1", features = [ "wav"]}
 bevy_atmosphere = "0.8.1"
 bevy_fps_controller = "0.2.4"
 bevy_rapier3d = "0.23.0"

@@ -40,10 +40,14 @@ pub enum AssetLoaderState {
 
 #[derive(AssetCollection, Resource, Debug)]
 pub struct MyAssetPack {
-    #[asset(path = "starting_warehouse.glb")]
+    #[asset(path = "models/starting_warehouse.glb")]
     pub main_scene: Handle<Gltf>,
-    #[asset(path = "box.glb")]
+    #[asset(path = "models/box.glb")]
     pub package: Handle<Gltf>,
+    #[asset(path = "models/scanner.glb")]
+    pub scanner: Handle<Gltf>,
+    #[asset(path = "audio/ambience.wav")]
+    pub ambience_sound: Handle<AudioSource>,
 }
 
 // Extract mesh from GLTF in order to have Rapier compute a collider shape. General function
@@ -61,6 +65,11 @@ fn load_scene(
             ..default()
         });
     }
+
+    commands.spawn(AudioBundle {
+        source: asset_pack.ambience_sound.clone(),
+        settings: PlaybackSettings::LOOP,
+    });
 }
 
 fn spawn_box(
