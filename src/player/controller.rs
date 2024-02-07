@@ -122,37 +122,46 @@ fn setup(
         .id();
 
     if let Some(scanner) = assets_gltf.get(&asset_pack.scanner) {
-        commands
-            .spawn((
-                Camera3dBundle {
-                    camera: Camera {
-                        hdr: true,
+        if let Some(player_hand) = assets_gltf.get(&asset_pack.player_hand) {
+            commands
+                .spawn((
+                    Camera3dBundle {
+                        camera: Camera {
+                            hdr: true,
+                            ..default()
+                        },
+                        projection: Projection::Perspective(PerspectiveProjection {
+                            fov: TAU / 5.0,
+                            ..default()
+                        }),
                         ..default()
                     },
-                    projection: Projection::Perspective(PerspectiveProjection {
-                        fov: TAU / 5.0,
-                        ..default()
-                    }),
-                    ..default()
-                },
-                PlayerInteractionSystem {
-                    is_holding_item: false,
-                },
-                BloomSettings::OLD_SCHOOL,
-                RenderPlayer { logical_entity },
-                AtmosphereCamera::default(),
-            ))
-            .with_children(|cam| {
-                cam.spawn((
-                    SceneBundle {
-                        scene: scanner.named_scenes["Scene"].clone(),
-                        transform: Transform::from_xyz(0.3, -0.2, -0.5),
+                    PlayerInteractionSystem {
+                        is_holding_item: false,
+                    },
+                    BloomSettings::OLD_SCHOOL,
+                    RenderPlayer { logical_entity },
+                    AtmosphereCamera::default(),
+                ))
+                .with_children(|cam| {
+                    cam.spawn((
+                        SceneBundle {
+                            scene: scanner.named_scenes["Scene"].clone(),
+                            transform: Transform::from_xyz(0.3, -0.2, -0.5),
 
+                            ..default()
+                        },
+                        ScannerTool,
+                    ));
+                })
+                .with_children(|cam| {
+                    cam.spawn(SceneBundle {
+                        scene: player_hand.named_scenes["Scene"].clone(),
+                        transform: Transform::from_xyz(0.4, -0.7, -0.4),
                         ..default()
-                    },
-                    ScannerTool,
-                ));
-            });
+                    });
+                });
+        }
     }
 
     commands.spawn(

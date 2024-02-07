@@ -48,6 +48,8 @@ pub struct MyAssetPack {
     pub scanner: Handle<Gltf>,
     #[asset(path = "audio/ambience.wav")]
     pub ambience_sound: Handle<AudioSource>,
+    #[asset(path = "models/playerhand.glb")]
+    pub player_hand: Handle<Gltf>,
 }
 
 // Extract mesh from GLTF in order to have Rapier compute a collider shape. General function
