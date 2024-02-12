@@ -24,6 +24,7 @@ impl Plugin for CharacterController {
             .add_plugins(AtmospherePlugin)
             .add_systems(OnEnter(AssetLoaderState::Done), setup)
             .add_plugins(AssetLoaderPlugin)
+            .add_plugins(ScannerTool)
             .insert_resource(DirectionalLightShadowMap { size: 4096 })
             .insert_resource(AmbientLight {
                 color: Color::WHITE,

@@ -2,6 +2,7 @@ use std::f32::consts::PI;
 
 use bevy::{prelude::*, transform::components::Transform};
 use bevy_fps_controller::controller::LogicalPlayer;
+use bevy_mod_picking::input::debug::print;
 use bevy_rapier3d::prelude::Velocity;
 
 #[derive(Component, Debug)]
@@ -17,16 +18,21 @@ fn scanner_sway(
     mut scanner_query: Query<&mut Transform, With<ScannerTool>>,
     time: Res<Time>,
     player_query: Query<&Velocity, With<LogicalPlayer>>,
+    camera_query: Query<&Transform, With<Camera>>,
 ) {
-    let step = 6.0;
+    let step = 0.;
     for player_velocity in player_query.iter() {
+        println!("{:?}", player_velocity.linvel);
         if player_velocity.linvel != Vec3::ZERO {
             for mut scanner_transform in scanner_query.iter_mut() {
                 let time_since_start = time.elapsed_seconds();
                 let delta: f32 = (time_since_start * step).sin();
-                println!("{delta}");
-                scanner_transform.translation.y += (delta / 1500.0).clamp(-0.01, 0.01);
+                scanner_transform.translation.y += delta;
                 //println!("{}", scanner_transform.translation.y);
+            }
+        } else {
+            for camera_transform in camera_query.iter() {
+                
             }
         }
     }
