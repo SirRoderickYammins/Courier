@@ -88,11 +88,14 @@ fn spawn_box(
                     transform: Transform::from_xyz(0., 2.5, 0.),
                     ..default()
                 },
-                Collider::cuboid(0.5, 0.5, 0.5),
+                Collider::cuboid(0.7, 0.7, 0.7),
                 Friction::coefficient(1.2),
                 RigidBody::Dynamic,
-                Dominance::group(0),
                 Package::new(),
+                CollisionGroups {
+                    memberships: Group::GROUP_2,
+                    filters: Group::GROUP_2,
+                },
                 PickableBundle::default(),
                 On::<Pointer<Click>>::run(|event: Listener<Pointer<Click>>| {
                     info!("Clicked on box {:?}", event.target);

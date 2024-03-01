@@ -13,6 +13,7 @@ use bevy_rapier3d::prelude::*;
 use std::f32::consts::{PI, TAU};
 
 use super::items::scanner::ScannerTool;
+
 pub struct CharacterController;
 
 impl Plugin for CharacterController {
@@ -36,8 +37,14 @@ impl Plugin for CharacterController {
 
 #[derive(Component, Clone, Copy, Debug)]
 pub struct PlayerInteractionSystem {
+    pub is_looking_at_item: bool,
     pub is_holding_item: bool,
+    pub interactable_entity: Option<Entity>,
 }
+
+//MainChar Marker
+#[derive(Component, Clone, Copy, Debug)]
+pub struct MainCharacter;
 
 const SPAWN_POINT: Vec3 = Vec3::new(0.0, 1.0, 0.0);
 
@@ -139,6 +146,8 @@ fn setup(
                     },
                     PlayerInteractionSystem {
                         is_holding_item: false,
+                        is_looking_at_item: false,
+                        interactable_entity: None,
                     },
                     BloomSettings::OLD_SCHOOL,
                     RenderPlayer { logical_entity },
