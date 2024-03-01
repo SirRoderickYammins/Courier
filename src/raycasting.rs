@@ -25,15 +25,12 @@ fn get_viewport_center(window: &Window) -> Vec2 {
     center_point
 }
 
+//Raycast constantly updates, modiftying the player's interaction system resource (defined in
+//controller.rs).
 fn raycast(
     window_query: Query<&Window>,
-    mut commands: Commands,
     mut camera_query: Query<(&Camera, &GlobalTransform, &mut PlayerInteractionSystem)>,
     _physics_context: Res<RapierContext>,
-    mut package_query: Query<(&Package, &mut Transform), (With<Package>, Without<Camera>)>,
-    mut text_query: Query<&mut Text, With<PackageInfoText>>,
-
-    input: Res<Input<KeyCode>>,
 ) {
     let qf = QueryFilter::new();
     let window = window_query.single();
@@ -55,21 +52,10 @@ fn raycast(
         if let Some((entity, _toi)) =
             _physics_context.cast_ray(ray.origin, ray.direction, max_toi, solid, filter)
         {
-            if let Ok((package_item, mut package_transform)) = package_query.get_mut(entity) {
-                player_interaction_sys.is_looking_at_item = true;
-                for mut text in &mut text_query {
-                    text.sections[0].value = format!(
-                        "Name: {}\nAddr:{}\nCountry:{}\nZIP:{}\nWeight:{:.2}\nLooking at:{}",
-                        package_item.recipient_name,
-                        package_item.street_address,
-                        package_item.country,
-                        package_item.zip_code,
-                        package_item.weight,
-                        player_interaction_sys.is_holding_item,
-                    );
-                }
-                if input.pressed(KeyCode::E) {}
-            }
+            player_interaction_sys.is_looking_at_item = true;
+            player_interaction_sys.interactable_entity = Some(entity);
+        } else {
+            player_interaction_sys.is_looking_at_item = false;
         }
     }
 }
