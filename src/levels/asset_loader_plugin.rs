@@ -4,7 +4,6 @@
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
-use bevy_mod_picking::prelude::*;
 use bevy_rapier3d::prelude::*;
 
 use crate::levels::package_data::Package;
@@ -13,7 +12,7 @@ use crate::tools::gltf::GltfToolsPlugin;
 pub struct AssetLoaderPlugin;
 impl Plugin for AssetLoaderPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state::<AssetLoaderState>()
+        app.init_state::<AssetLoaderState>()
             .add_loading_state(
                 LoadingState::new(AssetLoaderState::Loading)
                     .continue_to_state(AssetLoaderState::Done)
@@ -76,12 +75,12 @@ fn load_scene(
 
 fn spawn_box(
     mut commands: Commands,
-    input: Res<Input<KeyCode>>,
+    input: Res<ButtonInput<KeyCode>>,
     asset_pack: Res<MyAssetPack>,
     assets_gltf: Res<Assets<Gltf>>,
 ) {
     if let Some(gltf) = assets_gltf.get(&asset_pack.package) {
-        if input.pressed(KeyCode::G) {
+        if input.pressed(KeyCode::KeyG) {
             commands.spawn((
                 SceneBundle {
                     scene: gltf.named_scenes["Scene"].clone(),
@@ -92,14 +91,6 @@ fn spawn_box(
                 Friction::coefficient(1.2),
                 RigidBody::Dynamic,
                 Package::new(),
-                CollisionGroups {
-                    memberships: Group::GROUP_2,
-                    filters: Group::GROUP_2,
-                },
-                PickableBundle::default(),
-                On::<Pointer<Click>>::run(|event: Listener<Pointer<Click>>| {
-                    info!("Clicked on box {:?}", event.target);
-                }),
             ));
         }
     }

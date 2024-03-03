@@ -3,14 +3,11 @@ use crate::raycasting::PlayerRaycast;
 use bevy::core_pipeline::bloom::BloomSettings;
 use bevy::gltf::Gltf;
 use bevy::pbr::DirectionalLightShadowMap;
-use bevy::render::camera::RenderTarget;
-use bevy::window::WindowRef;
 use bevy::{prelude::*, window::CursorGrabMode};
 use bevy_atmosphere::plugin::{AtmosphereCamera, AtmospherePlugin};
 use bevy_fps_controller::controller::*;
-use bevy_mod_picking::prelude::*;
 use bevy_rapier3d::prelude::*;
-use std::f32::consts::{PI, TAU};
+use std::f32::consts::TAU;
 
 use super::items::scanner::ScannerTool;
 
@@ -20,17 +17,17 @@ impl Plugin for CharacterController {
     fn build(&self, app: &mut App) {
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
             .add_systems(Update, (manage_cursor, respawn))
-            .add_plugins(FpsControllerPlugin)
-            .add_plugins(PlayerRaycast)
+            //.add_plugins(PlayerRaycast)
             .add_plugins(AtmospherePlugin)
-            .add_systems(OnEnter(AssetLoaderState::Done), setup)
             .add_plugins(AssetLoaderPlugin)
-            .add_plugins(ScannerTool)
             .insert_resource(DirectionalLightShadowMap { size: 4096 })
             .insert_resource(AmbientLight {
                 color: Color::WHITE,
-                brightness: 0.3,
+                brightness: 100.0,
             })
+            .add_plugins(FpsControllerPlugin)
+            .add_systems(OnEnter(AssetLoaderState::Done), setup)
+            .add_plugins(ScannerTool)
             .insert_resource(ClearColor(Color::hex("D4F5F5").unwrap()));
     }
 }
@@ -59,33 +56,17 @@ fn setup(
     let mut window = window.single_mut();
     window.title = String::from("Courier");
 
-    commands
-        .spawn(PointLightBundle {
-            transform: Transform::from_xyz(0., 2.5, 0.).looking_at(Vec3::new(0., 0., 0.), Vec3::Z),
+    commands.spawn(PointLightBundle {
+        transform: Transform::from_xyz(0., 2.5, 0.).looking_at(Vec3::new(0., 0., 0.), Vec3::Z),
 
-            point_light: PointLight {
-                intensity: 600.0,
-                color: Color::WHITE,
-                shadows_enabled: true,
-                ..default()
-            },
+        point_light: PointLight {
+            intensity: 60000.0,
+            color: Color::WHITE,
+            shadows_enabled: true,
             ..default()
-        })
-        .with_children(|builder| {
-            builder.spawn(PbrBundle {
-                transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.0)),
-                mesh: meshes.add(Mesh::from(shape::UVSphere {
-                    radius: 0.1,
-                    ..default()
-                })),
-                material: materials.add(StandardMaterial {
-                    base_color: Color::YELLOW,
-                    emissive: Color::rgba_linear(0.0, 0., 0., 0.),
-                    ..default()
-                }),
-                ..default()
-            });
-        });
+        },
+        ..default()
+    });
 
     // Note that we have two entities for the player
     // One is a "logical" player that handles the physics computation and collision
@@ -173,23 +154,6 @@ fn setup(
                 });
         }
     }
-
-    commands.spawn(
-        TextBundle::from_section(
-            "",
-            TextStyle {
-                font_size: 24.0,
-                color: Color::BLACK,
-                ..default()
-            },
-        )
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            top: Val::Px(5.0),
-            left: Val::Px(5.0),
-            ..default()
-        }),
-    );
 }
 
 fn respawn(mut query: Query<(&mut Transform, &mut Velocity)>) {
@@ -204,10 +168,9 @@ fn respawn(mut query: Query<(&mut Transform, &mut Velocity)>) {
 }
 
 fn manage_cursor(
-    btn: Res<Input<MouseButton>>,
-    key: Res<Input<KeyCode>>,
+    btn: Res<ButtonInput<MouseButton>>,
+    key: Res<ButtonInput<KeyCode>>,
     mut window_query: Query<(Entity, &mut Window)>,
-    mut pointer: Query<&mut PointerLocation>,
     mut controller_query: Query<&mut FpsController>,
 ) {
     let mut window = window_query.single_mut();
@@ -228,16 +191,5 @@ fn manage_cursor(
         for mut controller in &mut controller_query {
             controller.enable_input = false;
         }
-    }
-    for mut pointer in &mut pointer {
-        pointer.location = Some(pointer::Location {
-            target: RenderTarget::Window(WindowRef::Primary)
-                .normalize(window_query.get_single().ok().map(|w| w.0))
-                .unwrap(),
-            position: Vec2 {
-                x: center.unwrap().x,
-                y: center.unwrap().y,
-            },
-        })
     }
 }

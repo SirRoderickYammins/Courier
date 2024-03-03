@@ -28,7 +28,6 @@ pub fn generate_gltf_colliders(
         let node = gltf_node_assets.get(node).unwrap();
         if let Some(gltf_mesh) = node.mesh.clone() {
             let gltf_mesh = gltf_mesh_assets.get(&gltf_mesh).unwrap();
-            println!("{:?}", gltf_mesh);
             for mesh_primitive in &gltf_mesh.primitives {
                 let mesh = mesh_assets.get(&mesh_primitive.mesh).unwrap();
                 commands.spawn((
